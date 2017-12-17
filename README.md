@@ -1,4 +1,12 @@
 # gob
+##### (name may change)
+
+### TODOS:
+- Middlewares need to be able to error out!
+- Handlers without access to response writer need to be able to set custom headers, such as `Location`
+- Stop the full request and return an error if a middleware freaks out
+- Obviously the actual router code underneath is more like a PoC!, than actual usable code, will need to rewrite that
+- TESTS!!! TESTS!!! TESTS!!!
 
 ### gob is based around dynamic handlers
 
