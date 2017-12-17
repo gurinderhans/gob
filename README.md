@@ -68,3 +68,7 @@ userRouter.Middleware((*UserContext).MiddlewareSetContext)
 
 userRouter.Route("POST", "/user", (*UserContext).CreateUser)
 userRouter.Route("GET", "/rawendpoint", (*UserContext).RawHandler)
+```
+
+## the goal is to use the dynamic handlers for endpoints that take in request models and return response models, be able to more easily generate documentation for these endpoints
+Ex. by running something like `gob.GenerateDocs()`
