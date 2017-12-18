@@ -17,7 +17,7 @@ func (c *RequestContext) RawHandler(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, "Raw handler, Hello world!")
 }
 
-func (c *RequestContext) SetContext(w http.ResponseWriter, req *http.Request) {
+func (c *RequestContext) SetContext(w http.ResponseWriter, req *http.Request) error {
   c.RandomVal = 3
   fmt.Println("set context")
 }

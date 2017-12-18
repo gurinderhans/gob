@@ -41,8 +41,10 @@ func (r *Router) Route(method, path string, fn interface{}) *Router {
   return r
 }
 
-func (r *Router) Middleware(fn interface{}) {
+func (r *Router) Middleware(fn interface{}) *Router {
   r.middlewares = append(r.middlewares, reflect.ValueOf(fn))
+
+  return r
 }
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -51,11 +53,15 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
   /// execute all middleware first!
   for _, mw := range r.middlewares {
-    mw.Call([]reflect.Value{
+    res := mw.Call([]reflect.Value{
       newCtx,
       reflect.ValueOf(w),
       reflect.ValueOf(req),
     })
+
+    if err := res[0].Interface(); err != nil {
+      panic(err)
+    }
   }
 
   for _, route := range r.routes {
