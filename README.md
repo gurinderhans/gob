@@ -2,7 +2,6 @@
 ##### (name may change)
 
 ### TODOS:
-- Handlers without access to response writer need to be able to set custom headers, such as `Location`
 - Obviously the actual router code underneath is more like a PoC!, than actual usable code, will need to rewrite that
 - TESTS!!! TESTS!!! TESTS!!!
 

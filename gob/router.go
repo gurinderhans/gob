@@ -70,21 +70,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
       numParams := handlerType.NumIn()
 
       // FIXME: maybe move this logic to when adding routes ???
-      if numParams == 1 {
-        res := route.Handler.Call([]reflect.Value{
-          newCtx,
-        })
-
-        rsp, rspCode, rerr := res[0].Interface(), int(res[1].Int()), res[2].Interface()
-        if rerr != nil {
-          panic(rerr)
-        }
-
-        data, _ := json.Marshal(rsp)
-        w.WriteHeader(rspCode)
-        io.WriteString(w, string(data))
-
-      } else if numParams == 2 {
+      if numParams == 2 {
         body, err := ioutil.ReadAll(req.Body)
         if err != nil {
           panic(err)
@@ -100,7 +86,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
           reflect.ValueOf(reqObj),
         })
 
-        rsp,rspCode, rerr := res[0].Interface(), int(res[1].Int()), res[2].Interface()
+        rsp, rspCode, rerr := res[0].Interface(), int(res[1].Int()), res[2].Interface()
         if rerr != nil {
           panic(rerr)
         }
@@ -108,7 +94,6 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
         data, err := json.Marshal(rsp)
         w.WriteHeader(rspCode)
         io.WriteString(w, string(data))
-
       } else if numParams == 3 {
         if handlerType.In(1) == httpResponseWriterType && handlerType.In(2).Elem() == httpRequestType {
           route.Handler.Call([]reflect.Value{
