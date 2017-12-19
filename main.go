@@ -1,59 +1,94 @@
 package main
 
-// import "fmt"
-import "net/http"
-import "io"
-import "errors"
-import "./gob"
+import (
+	"./gob"
+	"errors"
+	"io"
+	"net/http"
+	// "fmt"
+)
 
-type RequestContext struct {
-  Writer http.ResponseWriter
+type BaseContext struct{}
+
+func (c *BaseContext) SayHello(w http.ResponseWriter, req *http.Request) {
+	io.WriteString(w, "Hello")
 }
 
-func (c *RequestContext) RawHandler(w http.ResponseWriter, req *http.Request) {
-  // here you should be able to read the request object byte by byte....
-  // and write to the response object byte by byte....
-  w.Header().Set("random", "stuff")
-  w.WriteHeader(203)
-	io.WriteString(w, "Raw handler, Hello world!")
+func (c *BaseContext) SayWorld() (string, int, error) {
+	return "World!", 200, nil
 }
 
-func (c *RequestContext) SetContext(w http.ResponseWriter, req *http.Request) error {
-  c.Writer=w
-  return nil
+type UserProfile struct {
+	Name  string `json:"name"`
+	Age   int    `json:"age"`
+	Email string `json:"email"`
 }
 
-type ChatReq struct {
-  Name string `json:"name"`
-  UserIDs []string `json:"users"`
+type UserCreate struct {
+	*UserProfile
 }
 
-type ChatResp struct {
-  Name string `json:"name"`
-  Users []string `json:"users"`
+type UserContext struct {
+	AuthToken string
+	writer    http.ResponseWriter
 }
 
-func (c *RequestContext) CreateChat(cReq *ChatReq) (*ChatResp, int, error) {
-  rsp := &ChatResp{
-    Name: "some chat",
-    Users: []string{"user one", "user 2"},
-  }
+func (c *UserContext) SetupContext(w http.ResponseWriter, req *http.Request) error {
+	c.writer = w
+	return nil
+}
 
-  if cReq.Name == "rnad" {
-    err := errors.New("rnad name is not allowed!")
-    return nil, 400, err
-  }
+func (c *UserContext) RequiresLoggedIn(w http.ResponseWriter, req *http.Request) error {
+	authToken := req.Header.Get("x-auth-token")
+	if authToken == "FAKE" {
+		return errors.New("fake auth token received!!")
+	}
+	c.AuthToken = authToken
+	return nil
+}
 
-  c.Writer.Header().Set("Location", "https://www.api.com/chat/z87dadsd8")
+func (c *UserContext) GetCurrentUser() (*UserProfile, int, error) {
+	user := &UserProfile{
+		Name:  "John Doe",
+		Age:   21,
+		Email: "john@doe.co",
+	}
+	return user, 200, nil
+}
 
-  return rsp, 201, nil
+func (c *UserContext) CreateUser(req *UserCreate) (*UserProfile, int, error) {
+
+	if req.Age < 18 {
+		return nil, 400, errors.New("User age must be atleast 18!")
+	}
+
+	user := &UserProfile{
+		Name:  req.Name,
+		Age:   req.Age,
+		Email: req.Email,
+	}
+
+	userAlreadyExists := req.Name == "Admin Man"
+	if userAlreadyExists {
+		c.writer.Header().Set("Location", "https://api.com/user/as98da")
+
+		return user, 201, nil
+	}
+
+	return user, 200, nil
 }
 
 func main() {
-  router := gob.New(RequestContext{}).
-    Middleware((*RequestContext).SetContext).
-    Route("GET", "/raw", (*RequestContext).RawHandler).
-    Route("POST","/chat", (*RequestContext).CreateChat)
+	rootRouter := gob.NewRouter(BaseContext{}).
+		Route("GET", "/hello", (*BaseContext).SayHello).
+		Route("GET", "/world", (*BaseContext).SayWorld)
 
-  http.ListenAndServe(":3000", router)
+	userRouter := rootRouter.Subrouter(UserContext{}, "/user").
+		Middleware((*UserContext).SetupContext).
+		Route("POST", "/", (*UserContext).CreateUser)
+
+	userRouter.Middleware((*UserContext).RequiresLoggedIn).
+		Route("GET", "/me", (*UserContext).GetCurrentUser)
+
+	http.ListenAndServe(":3000", rootRouter)
 }

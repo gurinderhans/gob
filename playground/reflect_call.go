@@ -3,7 +3,7 @@ package main
 import "reflect"
 import "fmt"
 
-// func 
+// func
 
 func main() {
 
