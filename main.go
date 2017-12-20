@@ -8,7 +8,9 @@ import (
 	// "fmt"
 )
 
-type BaseContext struct{}
+type BaseContext struct {
+	ReqCount int
+}
 
 func (c *BaseContext) SayHello(w http.ResponseWriter, req *http.Request) {
 	io.WriteString(w, "Hello")
@@ -16,6 +18,11 @@ func (c *BaseContext) SayHello(w http.ResponseWriter, req *http.Request) {
 
 func (c *BaseContext) SayWorld() (string, int, error) {
 	return "World!", 200, nil
+}
+
+func (c *BaseContext) SetRandomVal(w http.ResponseWriter, req *http.Request) error {
+	c.ReqCount = 21
+	return nil
 }
 
 type UserProfile struct {
@@ -29,6 +36,7 @@ type UserCreate struct {
 }
 
 type UserContext struct {
+	*BaseContext
 	AuthToken string
 	writer    http.ResponseWriter
 }
@@ -79,7 +87,8 @@ func (c *UserContext) CreateUser(req *UserCreate) (*UserProfile, int, error) {
 }
 
 func main() {
-	rootRouter := gob.NewRouter(BaseContext{}).
+	rootRouter := gob.NewRouter(BaseContext{}, "/api/v2").
+		Middleware((*BaseContext).SetRandomVal).
 		Route("GET", "/hello", (*BaseContext).SayHello).
 		Route("GET", "/world", (*BaseContext).SayWorld)
 
