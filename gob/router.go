@@ -15,12 +15,12 @@ var (
 	httpResponseWriterType = reflect.TypeOf((*http.ResponseWriter)(nil)).Elem()
 )
 
-type trie struct {
+type Trie struct {
 	Value    interface{}
-	Children map[rune]*trie
+	Children map[rune]*Trie
 }
 
-func (t *trie) Add(key string, val interface{}) {
+func (t *Trie) Add(key string, val interface{}) {
 	runes := []rune(key)
 
 	looper := t
@@ -30,15 +30,15 @@ func (t *trie) Add(key string, val interface{}) {
 			looper = trie
 			continue
 		}
-		looper.Children[ri] = &trie{Children: make(map[rune]*trie)}
+		looper.Children[ri] = &Trie{Children: make(map[rune]*Trie)}
 		looper = looper.Children[ri]
 	}
 
 	lr := runes[len(runes)-1]
-	looper.Children[lr] = &trie{val, make(map[rune]*trie)}
+	looper.Children[lr] = &Trie{val, make(map[rune]*Trie)}
 }
 
-func (t *trie) Find(key string) *trie {
+func (t *Trie) Find(key string) *Trie {
 	runes := []rune(key)
 	looper := t
 	for _, r := range runes {
@@ -59,7 +59,7 @@ func (t *trie) Find(key string) *trie {
 type Router struct {
 	contextType reflect.Type
 	routePrefix string
-	tree        *trie
+	tree        *Trie
 	parent      *Router
 	rootRouter  *Router
 	rootRoute   *route
@@ -76,7 +76,7 @@ func NewRouter(ctx interface{}, prefix string) *Router {
 	r := &Router{
 		contextType: reflect.TypeOf(ctx),
 		routePrefix: path.Clean(prefix),
-		tree:        &trie{Children: make(map[rune]*trie)},
+		tree:        &Trie{Children: make(map[rune]*Trie)},
 	}
 
 	r.rootRouter = r
