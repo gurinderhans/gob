@@ -6,7 +6,7 @@ import (
 )
 
 type Router struct {
-	PathPrefix string
+	PathPrefix   string
 	contextType  reflect.Type
 	middlewares  []reflect.Value
 	homeReceiver *requestReceiver

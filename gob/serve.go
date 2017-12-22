@@ -1,12 +1,12 @@
-package go
+package gob
 
-import (
-	// "encoding/json"
-	// "fmt"
-	// "io"
-	// "io/ioutil"
-	// "net/http"
-)
+// import (
+// "encoding/json"
+// "fmt"
+// "io"
+// "io/ioutil"
+// "net/http"
+// )
 
 // var (
 // 	httpRequestType = reflect.TypeOf((*Request)(nil)).Elem()
@@ -14,7 +14,6 @@ import (
 
 // 	httpResponseWriterType = reflect.TypeOf((*http.ResponseWriter)(nil)).Elem()
 // )
-
 
 // func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 //   // request := &Request{req}

@@ -120,6 +120,11 @@ func TestAddRoutes(t *testing.T) {
 	router := NewRouter(RootContext{}, RootPrefix)
 	router.Route("GET", "/foo", (*RootContext).Foo)
 
+	if router.homeReceiver != nil {
+		t.Errorf("Incorrectly set home receiver!")
+		return
+	}
+
 	res := router.routeTree.Find(RootPrefix + "/foo")
 	if res == nil {
 		t.Errorf("Route was added incorrectly!")
