@@ -5,15 +5,25 @@ import (
 	"path"
 	"reflect"
 	"testing"
-  // "fmt"
 )
 
 type RootContext struct{}
 
-func (c *RootContext) Foo(w http.ResponseWriter, req *Request) {
+func (c *RootContext) Foo(w http.ResponseWriter, req *Request) {}
+func (c *RootContext) BarMiddleware(w http.ResponseWriter, req *Request) error {
+	return nil
+}
+func (c *RootContext) AnotherMiddleware(w http.ResponseWriter, req *Request) error {
+	return nil
 }
 
-type SubContext struct{}
+type SubContext struct {
+	*RootContext
+}
+
+func (c *SubContext) SubMiddleware(w http.ResponseWriter, req *Request) error {
+	return nil
+}
 
 var RootPrefix = "/api/v2"
 
@@ -110,40 +120,59 @@ func TestAddRoutes(t *testing.T) {
 	router := NewRouter(RootContext{}, RootPrefix)
 	router.Route("GET", "/foo", (*RootContext).Foo)
 
-  res := router.routeTree.Find(RootPrefix + "/foo")
-  if res == nil {
-    t.Errorf("Route was added incorrectly!")
-    return
-  }
-  receiver := res.Value.(*requestReceiver)
-  if receiver.Method != "GET" {
-    t.Errorf("Incorrect method set on route")
-    return
-  }
+	res := router.routeTree.Find(RootPrefix + "/foo")
+	if res == nil {
+		t.Errorf("Route was added incorrectly!")
+		return
+	}
+	receiver := res.Value.(*requestReceiver)
+	if receiver.Method != "GET" {
+		t.Errorf("Incorrect method set on route")
+		return
+	}
 	if receiver.Handler.Type() != reflect.TypeOf((*RootContext).Foo) {
 		t.Errorf("Incorrect handler set on home receiver")
 		return
 	}
-  if receiver.Router != router {
-    t.Errorf("Incorrect router set on receiver!")
-    return
-  }
+	if receiver.Router != router {
+		t.Errorf("Incorrect router set on receiver!")
+		return
+	}
 
-  router.Route("POST", "/user/:userId", (*RootContext).Foo)
+	router.Route("POST", "/user/:userId", (*RootContext).Foo)
 
-  res = router.routeTree.Find(RootPrefix + "/user/me")
-  if res == nil {
-    t.Errorf("Unable to match route!")
-    return
-  }
-  pathParams := res.Params
-  id, ok := pathParams["userId"]
-  if !ok {
-    t.Errorf("Key does not exist!")
-    return
-  }
-  if id != "me" {
-    t.Errorf("Wrong value for key!")
-    return
-  }
+	res = router.routeTree.Find(RootPrefix + "/user/me")
+	if res == nil {
+		t.Errorf("Unable to match route!")
+		return
+	}
+	pathParams := res.Params
+	id, ok := pathParams["userId"]
+	if !ok {
+		t.Errorf("Key does not exist!")
+		return
+	}
+	if id != "me" {
+		t.Errorf("Wrong value for key!")
+		return
+	}
+}
+
+func TestRouterMiddleware(t *testing.T) {
+	router := NewRouter(RootContext{}, RootPrefix)
+	router.Middleware((*RootContext).BarMiddleware)
+	router.Middleware((*RootContext).AnotherMiddleware)
+	router.Middleware((*SubContext).SubMiddleware)
+	if len(router.middlewares) != 2 {
+		t.Errorf("Error adding all middlewares!")
+		return
+	}
+
+	sub := router.Subrouter(SubContext{}, "/sub")
+	sub.Middleware((*SubContext).SubMiddleware)
+	sub.Middleware((*RootContext).BarMiddleware)
+	if len(sub.middlewares) != 1 {
+		t.Errorf("Error adding middleware to sub router")
+		return
+	}
 }

@@ -43,9 +43,9 @@ func (t *Trie) Add(key string, val interface{}) {
 		}
 		looper = looper.children[r]
 	}
-  if isParamKey {
-    looper.key = paramKey.String()
-  }
+	if isParamKey {
+		looper.key = paramKey.String()
+	}
 	looper.Value = val
 }
 
@@ -76,9 +76,9 @@ func (t *Trie) Find(key string) *Trie {
 			return nil
 		}
 	}
-  if isParamValue {
-    params[looper.key] = paramValue.String()
-  }
+	if isParamValue {
+		params[looper.key] = paramValue.String()
+	}
 	if looper.Value == nil {
 		return nil
 	}
