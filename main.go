@@ -86,11 +86,27 @@ func (c *UserContext) CreateUser(req *UserCreate) (*UserProfile, int, error) {
 	return user, 200, nil
 }
 
+func (c *BaseContext) Say() (string, int, error) {
+  return "Say", 200, nil
+}
+
+// -> both are same paths
+// /p/:id
+// /p/:man
+//
+// /p/:id/comments
+// /p/:user/friends
+// -> converts to
+//   user
+// /p/:/comments
+//   user
+// /p/:/friends
 func main() {
 	rootRouter := gob.NewRouter(BaseContext{}, "/api/v2").
 		Middleware((*BaseContext).SetRandomVal).
 		Route("GET", "/hello", (*BaseContext).SayHello).
-		Route("GET", "/world", (*BaseContext).SayWorld)
+		Route("GET", "/world", (*BaseContext).SayWorld).
+    Route("GET", "/speak/:language", (*BaseContext).Say)
 
 	userRouter := rootRouter.Subrouter(UserContext{}, "/user").
 		Middleware((*UserContext).SetupContext).

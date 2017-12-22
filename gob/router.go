@@ -15,47 +15,6 @@ var (
 	httpResponseWriterType = reflect.TypeOf((*http.ResponseWriter)(nil)).Elem()
 )
 
-type Trie struct {
-	Value    interface{}
-	Children map[rune]*Trie
-}
-
-func (t *Trie) Add(key string, val interface{}) {
-	runes := []rune(key)
-
-	looper := t
-	for i := 0; i < len(runes)-1; i++ {
-		ri := runes[i]
-		if trie, ok := looper.Children[ri]; ok {
-			looper = trie
-			continue
-		}
-		looper.Children[ri] = &Trie{Children: make(map[rune]*Trie)}
-		looper = looper.Children[ri]
-	}
-
-	lr := runes[len(runes)-1]
-	looper.Children[lr] = &Trie{val, make(map[rune]*Trie)}
-}
-
-func (t *Trie) Find(key string) *Trie {
-	runes := []rune(key)
-	looper := t
-	for _, r := range runes {
-		trie, ok := looper.Children[r]
-		if !ok {
-			return nil
-		}
-		looper = trie
-	}
-
-	if looper.Value == nil {
-		return nil
-	}
-
-	return looper
-}
-
 type Router struct {
 	contextType reflect.Type
 	routePrefix string
@@ -76,7 +35,7 @@ func NewRouter(ctx interface{}, prefix string) *Router {
 	r := &Router{
 		contextType: reflect.TypeOf(ctx),
 		routePrefix: path.Clean(prefix),
-		tree:        &Trie{Children: make(map[rune]*Trie)},
+		tree:        NewTrie(),
 	}
 
 	r.rootRouter = r
