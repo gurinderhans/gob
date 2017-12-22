@@ -8,13 +8,13 @@ func TestTreeAddSimple(t *testing.T) {
 	tree := NewTrie()
 	tree.Add("ab", "hello")
 
-	aTree, ok := tree.Children['a']
+	aTree, ok := tree.children['a']
 	if !ok {
 		t.Errorf("No 'a' found in trie")
 		return
 	}
 
-	bTree, ok := aTree.Children['b']
+	bTree, ok := aTree.children['b']
 	if !ok {
 		t.Errorf("No 'b' found in trie.a")
 		return
@@ -27,7 +27,7 @@ func TestTreeAddSimple(t *testing.T) {
 
 	tree.Add("ac", "world")
 
-	cTree, ok := aTree.Children['c']
+	cTree, ok := aTree.children['c']
 	if !ok {
 		t.Errorf("No 'c' found in trie.a")
 		return
@@ -43,26 +43,26 @@ func TestTreeAddComplex(t *testing.T) {
 	tree := NewTrie()
 	tree.Add("a/:bk/c", "val")
 
-	aTree, ok := tree.Children['a']
+	aTree, ok := tree.children['a']
 	if !ok {
 		t.Errorf("No 'a' found in trie")
 		return
 	}
-	aTree = aTree.Children['/']
+	aTree = aTree.children['/']
 
-	colonTree, ok := aTree.Children[':']
+	colonTree, ok := aTree.children[':']
 	if !ok {
 		t.Errorf("No ':' found in trie.a")
 		return
 	}
 
-	if colonTree.Key != "bk" {
+	if colonTree.key != "bk" {
 		t.Errorf("Incorrect key set for colon tree")
 		return
 	}
-	colonTree = colonTree.Children['/']
+	colonTree = colonTree.children['/']
 
-	cTree, ok := colonTree.Children['c']
+	cTree, ok := colonTree.children['c']
 	if !ok {
 		t.Errorf("No 'c' found in trie.a.:bk")
 		return
@@ -75,19 +75,19 @@ func TestTreeAddComplex(t *testing.T) {
 
 	tree.Add("a/:new/c", "other")
 
-	colonTree, ok = tree.Children['a'].Children['/'].Children[':']
+	colonTree, ok = tree.children['a'].children['/'].children[':']
 	if !ok {
 		t.Errorf("No 'a/:' found in trie")
 		return
 	}
 
-	if colonTree.Key != "new" {
+	if colonTree.key != "new" {
 		t.Errorf("Incorrect key on colonTree")
 		return
 	}
-	colonTree = colonTree.Children['/']
+	colonTree = colonTree.children['/']
 
-	cTree, ok = colonTree.Children['c']
+	cTree, ok = colonTree.children['c']
 	if !ok {
 		t.Errorf("No 'c' in trie.a/:new/")
 		return
@@ -97,6 +97,33 @@ func TestTreeAddComplex(t *testing.T) {
 		t.Errorf("Incorrect value on trie.a/:new/c")
 		return
 	}
+
+  tree.Add("r/:rid", "special")
+
+  rTree, ok := tree.children['r']
+  if !ok {
+    t.Errorf("No 'r' found in trie")
+    return
+  }
+  rTree = rTree.children['/']
+
+  colonTree, ok = rTree.children[':']
+  if !ok {
+    t.Errorf("No colon found")
+    return
+  }
+  if colonTree.Value != "special" {
+    t.Errorf("Incorrect value set on key")
+    return
+  }
+  if colonTree.key != "rid" {
+    t.Errorf("Incorrect key set on trie")
+    return
+  }
+  if len(colonTree.children) != 0 {
+    t.Errorf("children map is NOT empty!")
+    return
+  }
 }
 
 func TestTreeFindSimple(t *testing.T) {
@@ -160,16 +187,36 @@ func TestTreeFindComplex(t *testing.T) {
 	}
 
 	tree.Add("/a/hey/c", "yo")
-
 	res = tree.Find("/a/hey/c")
 
 	if res == nil {
 		t.Errorf("Not finding key w/o param")
 		return
 	}
-
 	if res.Value != "yo" {
 		t.Errorf("Incorrect value for key")
 		return
 	}
+
+  tree.Add("r/:rid", "reddit")
+  res = tree.Find("r/meirl")
+  if res == nil {
+    t.Errorf("Not finding key with param")
+    return
+  }
+  if res.Value != "reddit" {
+    t.Errorf("Incorrect value set for key")
+    return
+  }
+
+	val, ok = res.Params["rid"]
+	if !ok {
+		t.Errorf("Param key not found in result")
+		return
+	}
+	if val != "meirl" {
+		t.Errorf("Incorrect param value stored")
+		return
+	}
 }
+

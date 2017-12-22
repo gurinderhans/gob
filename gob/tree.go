@@ -10,14 +10,15 @@ type Tree interface {
 }
 
 type Trie struct {
-	Value    interface{}
-	Key      string
-	Children map[rune]*Trie
-	Params   map[string]interface{}
+	Value  interface{}
+	Params map[string]string
+
+	key      string
+	children map[rune]*Trie
 }
 
 func NewTrie() *Trie {
-	return &Trie{Children: make(map[rune]*Trie)}
+	return &Trie{children: make(map[rune]*Trie)}
 }
 
 func (t *Trie) Add(key string, val interface{}) {
@@ -28,8 +29,7 @@ func (t *Trie) Add(key string, val interface{}) {
 	for _, r := range key {
 		if isParamKey && r == '/' {
 			isParamKey = false
-			// TODO: maybe warn if `Key` already exists?
-			looper.Key = paramKey.String()
+			looper.key = paramKey.String() // TODO: maybe warn if `Key` already exists?
 			paramKey.Reset()
 		} else if isParamKey {
 			paramKey.WriteRune(r)
@@ -38,11 +38,14 @@ func (t *Trie) Add(key string, val interface{}) {
 		if r == ':' {
 			isParamKey = true
 		}
-		if _, exists := looper.Children[r]; !exists {
-			looper.Children[r] = NewTrie()
+		if _, exists := looper.children[r]; !exists {
+			looper.children[r] = NewTrie()
 		}
-		looper = looper.Children[r]
+		looper = looper.children[r]
 	}
+  if isParamKey {
+    looper.key = paramKey.String()
+  }
 	looper.Value = val
 }
 
@@ -50,22 +53,21 @@ func (t *Trie) Find(key string) *Trie {
 	var isParamValue bool
 	var paramValue bytes.Buffer
 
-	params := make(map[string]interface{})
-
+	params := make(map[string]string)
 	looper := t
 	for _, r := range key {
 		if isParamValue && r == '/' {
 			isParamValue = false
-			params[looper.Key] = paramValue.String()
+			params[looper.key] = paramValue.String()
 			paramValue.Reset()
 		} else if isParamValue {
 			paramValue.WriteRune(r)
 			continue
 		}
 
-		if trie, exists := looper.Children[r]; exists {
+		if trie, exists := looper.children[r]; exists {
 			looper = trie
-		} else if trie, exists := looper.Children[':']; exists {
+		} else if trie, exists := looper.children[':']; exists {
 			looper = trie
 			isParamValue = true
 			paramValue.WriteRune(r)
@@ -74,6 +76,9 @@ func (t *Trie) Find(key string) *Trie {
 			return nil
 		}
 	}
+  if isParamValue {
+    params[looper.key] = paramValue.String()
+  }
 	if looper.Value == nil {
 		return nil
 	}

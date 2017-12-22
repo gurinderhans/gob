@@ -102,18 +102,18 @@ func (c *BaseContext) Say() (string, int, error) {
 //   user
 // /p/:/friends
 func main() {
-	rootRouter := gob.NewRouter(BaseContext{}, "/api/v2").
-		Middleware((*BaseContext).SetRandomVal).
-		Route("GET", "/hello", (*BaseContext).SayHello).
-		Route("GET", "/world", (*BaseContext).SayWorld).
-    Route("GET", "/speak/:language", (*BaseContext).Say)
-
-	userRouter := rootRouter.Subrouter(UserContext{}, "/user").
-		Middleware((*UserContext).SetupContext).
-		Route("POST", "/", (*UserContext).CreateUser)
-
-	userRouter.Middleware((*UserContext).RequiresLoggedIn).
-		Route("GET", "/me", (*UserContext).GetCurrentUser)
-
-	http.ListenAndServe(":3000", rootRouter)
+	// rootRouter := gob.NewRouter(BaseContext{}, "/api/v2").
+	// 	Middleware((*BaseContext).SetRandomVal).
+	// 	Route("GET", "/hello", (*BaseContext).SayHello).
+	// 	Route("GET", "/world", (*BaseContext).SayWorld).
+  //   Route("GET", "/speak/:language", (*BaseContext).Say)
+  //
+	// userRouter := rootRouter.Subrouter(UserContext{}, "/user").
+	// 	Middleware((*UserContext).SetupContext).
+	// 	Route("POST", "/", (*UserContext).CreateUser)
+  //
+	// userRouter.Middleware((*UserContext).RequiresLoggedIn).
+	// 	Route("GET", "/me", (*UserContext).GetCurrentUser)
+  //
+	// http.ListenAndServe(":3000", rootRouter)
 }
