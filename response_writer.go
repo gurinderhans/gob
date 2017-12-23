@@ -4,18 +4,22 @@ import (
 	"net/http"
 )
 
-type ResponseWriter struct {
+type ResponseWriter interface {
 	http.ResponseWriter
 }
 
-func (w ResponseWriter) Header() http.Header {
+type responseWriter struct {
+	http.ResponseWriter
+}
+
+func (w responseWriter) Header() http.Header {
 	return w.ResponseWriter.Header()
 }
 
-func (w ResponseWriter) Write(data []byte) (int, error) {
+func (w responseWriter) Write(data []byte) (int, error) {
 	return w.ResponseWriter.Write(data)
 }
 
-func (w ResponseWriter) WriteHeader(statusCode int) {
+func (w responseWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }

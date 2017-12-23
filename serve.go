@@ -12,7 +12,7 @@ import (
 
 func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
-	writer := ResponseWriter{w}
+	writer := responseWriter{w}
 	writer.WriteHeader(201)
 
 	// requestPath := path.Clean(req.URL.Path)

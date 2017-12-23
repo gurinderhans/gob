@@ -269,6 +269,17 @@ func TestInvalidRouteHandler(t *testing.T) {
 		router := NewRouter(RootContext{}, RootPrefix)
 		router.Get("/path", func(c *RootContext, req *Req) (*Rsp, int, string) { return nil, 0, "" })
 	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Creating route with invalid handler did NOT panic!")
+			}
+		}()
+
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Get("/path", func(c *RootContext, req *Req) {})
+	}()
 }
 
 func TestRouterMiddleware(t *testing.T) {
