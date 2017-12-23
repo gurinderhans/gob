@@ -1,31 +1,24 @@
 package gob
 
 import (
-	"net/http"
-	"path"
 	"reflect"
 	"testing"
 )
 
+var RootPrefix = "/api/v2"
+
 type RootContext struct{}
 
-func (c *RootContext) Foo(w http.ResponseWriter, req *Request) {}
-func (c *RootContext) BarMiddleware(w http.ResponseWriter, req *Request) error {
-	return nil
-}
-func (c *RootContext) AnotherMiddleware(w http.ResponseWriter, req *Request) error {
-	return nil
-}
+func (c *RootContext) Foo(w ResponseWriter, req *Request) {}
+
+type Req struct{}
+type Rsp struct{}
 
 type SubContext struct {
 	*RootContext
 }
 
-func (c *SubContext) SubMiddleware(w http.ResponseWriter, req *Request) error {
-	return nil
-}
-
-var RootPrefix = "/api/v2"
+func (c *SubContext) SubFoo(w ResponseWriter, req *Request) {}
 
 func TestCreateNewRouter(t *testing.T) {
 	router := NewRouter(RootContext{}, RootPrefix)
@@ -53,7 +46,7 @@ func TestCreateSubrouter(t *testing.T) {
 		t.Errorf("Incorrect context set for subrouter")
 		return
 	}
-	if sub.PathPrefix != path.Clean(RootPrefix+subPrefix) {
+	if sub.PathPrefix != RootPrefix+subPrefix {
 		t.Errorf("Incorrect path prefix for sub router")
 		return
 	}
@@ -70,13 +63,15 @@ func TestCreateSubrouter(t *testing.T) {
 		return
 	}
 
-	type SubSubContext struct{}
+	type SubSubContext struct {
+		*SubContext
+	}
 	subsubRouter := sub.Subrouter(SubSubContext{}, "/down")
 	if subsubRouter.contextType != reflect.TypeOf(SubSubContext{}) {
 		t.Errorf("Incorrect context set for sub router")
 		return
 	}
-	if subsubRouter.PathPrefix != path.Clean(RootPrefix+subPrefix+"/down") {
+	if subsubRouter.PathPrefix != RootPrefix+subPrefix+"/down" {
 		t.Errorf("Incorrect path prefix set for sub router")
 		return
 	}
@@ -94,90 +89,243 @@ func TestCreateSubrouter(t *testing.T) {
 	}
 }
 
+func TestInvalidRouterContext(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Creating router with wrong context did NOT panic!")
+			return
+		}
+	}()
+
+	type WrongContext []int
+	NewRouter(WrongContext{}, RootPrefix)
+}
+
+func TestNilRouterContext(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Creating router with wrong context did NOT panic!")
+			return
+		}
+	}()
+
+	NewRouter(nil, RootPrefix)
+}
+
+func TestInvalidSubrouterContext(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Creating subrouter with missing parent context did NOT panic!")
+			return
+		}
+	}()
+
+	router := NewRouter(RootContext{}, RootPrefix)
+	type MissingParentContext struct{}
+	router.Subrouter(MissingParentContext{}, "/sub")
+}
+
+func TestNilSubrouterContext(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Creating subrouter with nil context did NOT panic!")
+			return
+		}
+	}()
+
+	router := NewRouter(RootContext{}, RootPrefix)
+	router.Subrouter(nil, "/sub")
+}
+
 func TestAddHomeRoute(t *testing.T) {
 	router := NewRouter(RootContext{}, RootPrefix)
-	router.Route("GET", "/", (*RootContext).Foo)
+	router.Get("/", (*RootContext).Foo)
 
 	if router.homeReceiver == nil {
 		t.Errorf("Router's home receiver is NOT set!")
 		return
 	}
-	if router.homeReceiver.Method != "GET" {
-		t.Errorf("Incorrect method set on receiver!")
+}
+
+func TestAddSimpleRoute(t *testing.T) {
+	router := NewRouter(RootContext{}, RootPrefix)
+	router.Get("/foo", (*RootContext).Foo)
+
+	if router.homeReceiver != nil {
+		t.Errorf("The home receiver on router should not bet set")
 		return
 	}
-	if router.homeReceiver.Router != router {
-		t.Errorf("Incorrect router set on home receiver")
+	res := router.routeTree.Find(RootPrefix + "/foo")
+	if res == nil {
+		t.Errorf("Added route not found")
 		return
 	}
-	if router.homeReceiver.Handler.Type() != reflect.TypeOf((*RootContext).Foo) {
-		t.Errorf("Incorrect handler set on home receiver")
+	receiver := res.Value.(*requestReceiver)
+	if receiver.Method != httpMethodGet {
+		t.Errorf("Incorrect method set on route receiver")
+		return
+	}
+	if receiver.Handler.Type() != reflect.TypeOf((*RootContext).Foo) {
+		t.Errorf("Incorrect handler set on request receiver")
+		return
+	}
+	if receiver.Router != router {
+		t.Errorf("Incorrect router set on request receiver")
 		return
 	}
 }
 
-func TestAddRoutes(t *testing.T) {
+func TestAddComplexRoute(t *testing.T) {
 	router := NewRouter(RootContext{}, RootPrefix)
-	router.Route("GET", "/foo", (*RootContext).Foo)
+	router.Post("/user/:userId", (*RootContext).Foo)
 
-	if router.homeReceiver != nil {
-		t.Errorf("Incorrectly set home receiver!")
-		return
-	}
-
-	res := router.routeTree.Find(RootPrefix + "/foo")
+	res := router.routeTree.Find(RootPrefix + "/user/me")
 	if res == nil {
-		t.Errorf("Route was added incorrectly!")
-		return
-	}
-	receiver := res.Value.(*requestReceiver)
-	if receiver.Method != "GET" {
-		t.Errorf("Incorrect method set on route")
-		return
-	}
-	if receiver.Handler.Type() != reflect.TypeOf((*RootContext).Foo) {
-		t.Errorf("Incorrect handler set on home receiver")
-		return
-	}
-	if receiver.Router != router {
-		t.Errorf("Incorrect router set on receiver!")
+		t.Errorf("Added route not found!")
 		return
 	}
 
-	router.Route("POST", "/user/:userId", (*RootContext).Foo)
-
-	res = router.routeTree.Find(RootPrefix + "/user/me")
-	if res == nil {
-		t.Errorf("Unable to match route!")
-		return
-	}
-	pathParams := res.Params
-	id, ok := pathParams["userId"]
+	userId, ok := res.Params["userId"]
 	if !ok {
-		t.Errorf("Key does not exist!")
+		t.Errorf("Param key does not exist!")
 		return
 	}
-	if id != "me" {
-		t.Errorf("Wrong value for key!")
+	if userId != "me" {
+		t.Errorf("Incorrect value for param key")
 		return
 	}
+}
+
+func TestAddIncorrectContextRoute(t *testing.T) {
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Adding route with incorrect context handler did NOT panic!")
+				return
+			}
+		}()
+
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Get("/path", (*SubContext).SubFoo)
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Adding route handler with nil context did NOT panic!")
+				return
+			}
+		}()
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Get("/path", func(w ResponseWriter, req *Request) {})
+	}()
+}
+
+func TestAddComplexRouteHandler(t *testing.T) {
+	router := NewRouter(RootContext{}, RootPrefix)
+	router.Get("/path", func(c *RootContext, req *Req) (*Rsp, int, error) {
+		return &Rsp{}, 200, nil
+	})
+	res := router.root.routeTree.Find(RootPrefix + "/path")
+	if res == nil {
+		t.Errorf("Added route not found!")
+		return
+	}
+}
+
+func TestAddComplexInvalidRouteHandler(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Adding invalid complex route handler did NOT panic!")
+			return
+		}
+	}()
+	router := NewRouter(RootContext{}, RootPrefix)
+	router.Get("/path", func(c *RootContext, req *Req) (int, error) {
+		return 0, nil
+	})
+}
+
+func TestInvalidRouteHandler(t *testing.T) {
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Creating route with invalid handler did NOT panic!")
+				return
+			}
+		}()
+
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Get("/path", []int{})
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Creating route with invalid handler did NOT panic!")
+			}
+		}()
+
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Get("/path", func(c *RootContext, req *Req) (*Rsp, int, string) { return nil, 0, "" })
+	}()
 }
 
 func TestRouterMiddleware(t *testing.T) {
 	router := NewRouter(RootContext{}, RootPrefix)
-	router.Middleware((*RootContext).BarMiddleware)
-	router.Middleware((*RootContext).AnotherMiddleware)
-	router.Middleware((*SubContext).SubMiddleware)
-	if len(router.middlewares) != 2 {
-		t.Errorf("Error adding all middlewares!")
+	router.Middleware(func(c *RootContext, w ResponseWriter, req *Request) error { return nil })
+	if len(router.middlewares) != 1 {
+		t.Errorf("Failed to add middleware to router")
 		return
 	}
+}
 
-	sub := router.Subrouter(SubContext{}, "/sub")
-	sub.Middleware((*SubContext).SubMiddleware)
-	sub.Middleware((*RootContext).BarMiddleware)
-	if len(sub.middlewares) != 1 {
-		t.Errorf("Error adding middleware to sub router")
-		return
-	}
+func TestRouterInvalidMiddleware(t *testing.T) {
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Adding invalid middleware did NOT panic!")
+				return
+			}
+		}()
+
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Middleware([]int{})
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Adding middleware with incorrect context did NOT panic!")
+				return
+			}
+		}()
+
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Middleware(func(c *SubContext, w ResponseWriter, req *Request) error { return nil })
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Adding middleware with no return error value did NOT panic!")
+				return
+			}
+		}()
+
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Middleware(func(c *RootContext, w ResponseWriter, req *Request) {})
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Adding middleware with incorrect return value did NOT panic!")
+				return
+			}
+		}()
+
+		router := NewRouter(RootContext{}, RootPrefix)
+		router.Middleware(func(c *RootContext, w ResponseWriter, req *Request) string { return "" })
+	}()
 }
