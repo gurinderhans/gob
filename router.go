@@ -67,7 +67,7 @@ func (r *Router) Subrouter(ctx interface{}, basePath string) *Router {
 func (r *Router) Middleware(fn interface{}) *Router {
 	vfn := reflect.ValueOf(fn)
 
-	validateMiddlewareHandler(vfn, r.contextType)
+	validateMiddleware(vfn, r.contextType)
 
 	r.middlewares = append(r.middlewares, vfn)
 	return r
@@ -152,23 +152,23 @@ func validateHandler(vfn reflect.Value, ctxType reflect.Type) {
 	}
 }
 
-func validateMiddlewareHandler(mfn reflect.Value, ctxType reflect.Type) {
-	mType := mfn.Type()
-	if mType.Kind() != reflect.Func {
+func validateMiddleware(vfn reflect.Value, ctxType reflect.Type) {
+	vType := vfn.Type()
+	if vType.Kind() != reflect.Func {
 		panic("Handler type should be a func.")
 	}
 
-	numIn := mType.NumIn()
+	numIn := vType.NumIn()
 	if numIn == 0 {
 		panic("Middleware's first param should be a context param")
-	} else if mType.In(0).Elem() != ctxType {
+	} else if vType.In(0).Elem() != ctxType {
 		panic("Invalid handler, context param doesn't match router context")
 	}
 
-	numOut := mType.NumOut()
+	numOut := vType.NumOut()
 	if numOut == 0 {
 		panic("Middlewares need to return an error type")
-	} else if mType.Out(0) != errorType {
+	} else if vType.Out(0) != errorType {
 		panic("Return type for middleware isn't an error type")
 	}
 }
