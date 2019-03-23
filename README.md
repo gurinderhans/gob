@@ -1,9 +1,8 @@
 # gob
-##### (name may change)
+###### Note: The name is not final and may change.
 
-### TODOS:
-- Obviously the actual router code underneath is more like a PoC!, than actual usable code, will need to rewrite that
-- TESTS!!! TESTS!!! TESTS!!!
+gob is go library which routes API calls. Each endpoint is a specific handler typed by GET, POST, PUT, DELETE. gob supports middleware functions to inject data into request contexts. It's an easy method call to generate docs for your entire API.
+
 
 ### gob is based around dynamic handlers
 
@@ -75,5 +74,13 @@ userRouter.Route("POST", "/user", (*UserContext).CreateUser)
 userRouter.Route("GET", "/rawendpoint", (*UserContext).RawHandler)
 ```
 
-## the goal is to use the dynamic handlers for endpoints that take in request models and return response models, be able to more easily generate documentation for these endpoints
-Ex. by running something like `gob.GenerateDocs()`
+#### Dynamic handlers are used by gob for endpoints that take in request models and return response models. The goal is to enable users to easily generate documentation for these endpoints.
+
+>Ex. by running something like `gob.GenerateDocs()`
+
+
+### TODOs:
+
+- The actual router code underneath is more like proof of concept than actual usable code and needs to be rewritten.
+
+- It has not been tested properly, so test cases have to be implemented.
